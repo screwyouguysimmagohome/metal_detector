@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import grid3DFunc
 from mpl_toolkits.mplot3d import Axes3D
+import scipy.integrate as integrate
+
 
 mu0 = 4*np.pi*1e-7  # vaccum permeability
 I = 10  # 10 ampere
@@ -61,7 +63,7 @@ def plot_magnetic_field(grid, B_field):
     plt.show()
 
 
-def Emfield_plot_behavior_straight_wire():
+def Emfield_plot_behavior_straight_wire_cumsum_method():
     grid = grid3DFunc.grid_3D(
         -0.05, 0.05, 0.01, -0.06, 0.06, 0.01, -0.05, 0.05, 0.01)
 
@@ -75,11 +77,50 @@ def Emfield_plot_behavior_straight_wire():
     plot_magnetic_field(grid, B_field)
 
 
-Emfield_plot_behavior_straight_wire()
+# Emfield_plot_behavior_straight_wire()
+
+def biot_savart_integral(point, N):
+
+    N_segments = np.linspace(-0.05, 0.05, N)
+    y_unit_vector = ([0, 1, 0])
+    integrand = []
+    used_segments = []
+
+    for dl in N_segments:
+        segment_pos = np.array([0, dl, 0])
+        r_vec = point-segment_pos
+        r_magnitude = np.linalg.norm(r_vec)
+        if r_magnitude < 1e-10:
+            continue
+
+        used_segments.append(dl)
+
+        integrand.append(np.cross(y_unit_vector, r_vec)/r_magnitude**3)
+
+    used_segments = np.array(used_segments)
+    integrand = np.array(integrand)
+
+    B_integrated = integrate.simpson(integrand, used_segments, axis=0)
+
+    B = mu0/(4*np.pi)*I*B_integrated
+
+    return B
 
 
-if __name__ == "__main__":
+def Emfield_plot_behavior_straight_wire_integral_method():
     grid = grid3DFunc.grid_3D(
         -0.05, 0.05, 0.01, -0.06, 0.06, 0.01, -0.05, 0.05, 0.01)
 
-    print(grid.shape)
+    B_field = np.zeros(grid.shape[:3]+(3,))
+
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            for k in range(grid.shape[2]):
+                B_field[i, j, k] = biot_savart_integral(grid[i, j, k], 100)
+
+    plot_magnetic_field(grid, B_field)
+
+
+if __name__ == "__main__":
+    Emfield_plot_behavior_straight_wire_cumsum_method()
+    Emfield_plot_behavior_straight_wire_integral_method()
