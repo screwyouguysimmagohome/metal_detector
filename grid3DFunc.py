@@ -5,7 +5,7 @@ import numpy as np
 def grid_3D(Xstart, Xstop, Xspaceing, Ystart, Ystop, Yspaceing, Zstart, Zstop, Zspaceing):
 
     x = np.arange(Xstart, Xstop+Xspaceing, Xspaceing)
-    y = np.arange(Ystart, Ystop+Yspaceing, Yspaceing)
+    y = np.arange(Ystart, Ystop, Yspaceing)
     z = np.arange(Zstart, Zstop+Zspaceing, Zspaceing)
 
     X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
