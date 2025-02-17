@@ -120,7 +120,5 @@ def Emfield_plot_behavior_straight_wire_integral_method():
 
     plot_magnetic_field(grid, B_field)
 
-
-if __name__ == "__main__":
     Emfield_plot_behavior_straight_wire_cumsum_method()
     Emfield_plot_behavior_straight_wire_integral_method()
