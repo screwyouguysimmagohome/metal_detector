@@ -61,46 +61,89 @@ def biot_savart_integral(wire_points, field_points, I):
     wire_points = np.asarray(wire_points)
     field_points = np.asarray(field_points)
 
-    # Remember the original shape (in case it's 4D or more)
-    orig_shape = field_points.shape
-
-    # If the last dimension is 3 but there are more than 2 total dimensions
-    # (e.g. (nx, ny, nz, 3)), flatten to (M, 3)
-    if field_points.ndim > 2 and field_points.shape[-1] == 3:
-        field_points = field_points.reshape(-1, 3)
-
     # Build dL and segment midpoints
-    dl = wire_points[1:] - wire_points[:-1]
-    r_seg = 0.5*(wire_points[1:] + wire_points[:-1])
+    dl = wire_points[1:, :] - wire_points[:-1, :]
+    r_seg = 0.5*(wire_points[1:, :] + wire_points[:-1, :])
 
     # Initialize B_total for the flattened field points
-    B_total = np.zeros((field_points.shape[0], 3), dtype=float)
+    B_total = np.zeros((field_points.shape), dtype=float)
 
     # Accumulate contributions from each wire segment
     for dLi, seg_pos in zip(dl, r_seg):
-        r_vec = field_points - seg_pos  # shape: (M, 3)
-        r_mag = np.linalg.norm(r_vec, axis=1, keepdims=True)
+        r_vec = field_points - seg_pos  # shape: (21, 21, 21, 3)
+        # shape: (21,1,21,3)
+        r_mag = np.linalg.norm(r_vec, axis=-1, keepdims=True)
+        # r_mag=np.reshape(r_mag,(21,21,21,3))
         r_mag[r_mag < 1e-14] = 1e-14   # avoid singularities
 
         cross_term = np.cross(dLi, r_vec)
-        B_total += cross_term / (r_mag**3)
+        # breakpoint()
+        B_total += cross_term / r_mag
 
     # Apply the Biot–Savart prefactor
     B_total *= mu0 * I / (4*np.pi)
 
-    # Reshape back if we flattened
-    if field_points.shape[0] != orig_shape[0]:  # means we did flatten
-        # Restore to the original shape, e.g. (nx, ny, nz, 3)
-        B_total = B_total.reshape(*orig_shape[:-1], 3)
-
     return B_total
 
 
+'''
 def EM_of_circle():
-    circle = define_circle(0.05, 360)
+    circle = define_circle(0.05, 45)
     grid = grid3d.grid_3D(-0.1, 0.1, 0.01, -0.1, 0.1, 0.01, -0.1, 0.1, 0.01)
     B = biot_savart_integral(circle, grid, 10)
-    print(B)
+   # print(B)
+'''
 
 
-EM_of_circle()
+circle = define_circle(0.05, 45)
+
+
+def plot_magnetic_field(grid, B_field):
+
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Brug hele griddet
+    X = grid[..., 0]
+    Y = grid[..., 1]
+    Z = grid[..., 2]
+
+    U = B_field[..., 0]  # Magnetfelt i x-retning
+    V = B_field[..., 1]  # Magnetfelt i y-retning
+    W = B_field[..., 2]  # Magnetfelt i z-retning
+
+    # Beregn magnetfeltets størrelse
+    B_magnitude = np.sqrt(U**2 + V**2 + W**2)
+    B_magnitude[B_magnitude == 0] = np.min(B_magnitude[B_magnitude > 0])
+
+    print("Max B:", np.max(B_magnitude))
+    print("Min B:", np.min(B_magnitude))
+
+    # Brug quiver til at tegne vektorer, hvor længden svarer til magnetfeltets styrke
+    ax.quiver(X, Y, Z, U*1e4, V*1e4, W*1e4,
+              length=1.0, normalize=False, color='r')
+
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_zlabel("Z (m)")
+    ax.set_title("Magnetfeltets retning og styrke i 3D")
+
+    plt.show()
+
+
+def Emfield_plot_behavior_circle_wire():
+    grid = grid3d.grid_3D(
+        -0.05, 0.05, 0.02, -0.05, 0.05, 0.02, -0.08, 0.08, 0.02)
+
+    B_field = np.zeros(grid.shape[:3]+(3,))
+
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            for k in range(grid.shape[2]):
+                B_field[i, j, k] = biot_savart_integral(
+                    circle, grid[i, j, k], 10)
+
+    plot_magnetic_field(grid, B_field)
+
+
+Emfield_plot_behavior_circle_wire()
