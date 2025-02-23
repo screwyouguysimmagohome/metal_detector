@@ -33,7 +33,7 @@ def define_circle(radius, definition):
     return circle
 
 
-circle_points = define_circle(0.02, 180)
+circle_points = define_circle(0.02, 2880*8)
 
 
 def point_to_point_circle(circle_points):
